@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time ASL Detection</title>
+</head>
+<body>
+    <h1>Real-Time ASL Detection</h1>
+    <button id="start-btn">Start Detection</button>
+    <br><br>
+    <video id="webcam" autoplay playsinline style="width: 640px; height: 480px;"></video>
+    <p>Detected Sign: <span id="detected-sign">None</span></p>
+
+    <script>
+        const startBtn = document.getElementById('start-btn');
+        const webcam = document.getElementById('webcam');
+        const detectedSign = document.getElementById('detected-sign');
+
+        // Access the webcam
+        async function startWebcam() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                webcam.srcObject = stream;
+            } catch (error) {
+                console.error("Error accessing webcam:", error);
+                alert("Failed to access webcam. Please allow camera permissions.");
+            }
+        }
+
+        // Send frames to the backend for ASL detection
+        async function detectASL() {
+            const canvas = document.createElement('canvas');
+            canvas.width = webcam.videoWidth;
+            canvas.height = webcam.videoHeight;
+            const context = canvas.getContext('2d');
+
+            setInterval(async () => {
+                context.drawImage(webcam, 0, 0, canvas.width, canvas.height);
+                const frame = canvas.toDataURL('image/jpeg');  // Convert frame to base64
+
+                // Send the frame to the backend
+                const response = await fetch('/detect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ frame: frame }),
+                });
+
+                const data = await response.json();
+                detectedSign.textContent = data.sign || "None";  // Display detected sign
+            }, 100);  // Send frames every 100ms
+        }
+
+        startBtn.addEventListener('click', () => {
+            startWebcam();
+            detectASL();
+        });
+    </script>
+</body>
+</html>
